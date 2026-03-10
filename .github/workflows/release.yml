@@ -3,13 +3,36 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  validate-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+    steps:
+      - name: Validate semver tag
+        id: semver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Tag $TAG is not valid semver"
+            exit 1
+          fi
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" =~ - ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: validate-tag
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -35,9 +58,77 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           binary="otlp9s-${{ matrix.goos }}-${{ matrix.goarch }}"
-          go build -ldflags="-s -w" -o "$binary" ./cmd/otlp9s/
+          go build -ldflags="-s -w -X main.version=${{ needs.validate-tag.outputs.version }}" \
+            -o "$binary" ./cmd/otlp9s/
 
-      - name: Upload release artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: otlp9s-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: otlp9s-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  publish:
+    needs: [validate-tag, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Find previous tag
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sed -n '2p')
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            if [ -z "$PREV_TAG" ]; then
+              echo "## Initial Release"
+              echo ""
+              git log --pretty=format:"- %s (%h)" "$CURRENT_TAG"
+            else
+              echo "## What's Changed"
+              echo ""
+              echo "**Full diff**: [\`${PREV_TAG}...${CURRENT_TAG}\`](https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${CURRENT_TAG})"
+              echo ""
+
+              # Group commits by conventional commit type
+              for type_label in "feat:Features" "fix:Bug Fixes" "perf:Performance" "refactor:Refactoring" "docs:Documentation" "chore:Maintenance" "test:Tests" "ci:CI"; do
+                type="${type_label%%:*}"
+                label="${type_label##*:}"
+                commits=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${CURRENT_TAG}" | grep "^- ${type}" || true)
+                if [ -n "$commits" ]; then
+                  echo "### ${label}"
+                  echo ""
+                  echo "$commits"
+                  echo ""
+                fi
+              done
+
+              # Uncategorized commits
+              other=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..${CURRENT_TAG}" | grep -v -E "^- (feat|fix|perf|refactor|docs|chore|test|ci)" || true)
+              if [ -n "$other" ]; then
+                echo "### Other"
+                echo ""
+                echo "$other"
+                echo ""
+              fi
+            fi
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: otlp9s-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: ${{ needs.validate-tag.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          prerelease: ${{ needs.validate-tag.outputs.prerelease == 'true' }}
+          files: dist/*
