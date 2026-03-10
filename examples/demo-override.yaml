@@ -1,0 +1,15 @@
+# Override for opentelemetry-demo collector.
+# Redirects trace export to otlp9s running on the host.
+#
+# Usage:
+#   1. Start the demo:  docker compose up -d
+#   2. Build otlp9s:    make build
+#   3. Run otlp9s:      ./otlp9s --listen :4317 --forward localhost:16317
+#      (16317 = Jaeger's OTLP gRPC port mapped to the host)
+#   4. Apply this override to the collector (see setup script).
+
+exporters:
+  otlp_grpc/jaeger:
+    endpoint: "host.docker.internal:4317"
+    tls:
+      insecure: true

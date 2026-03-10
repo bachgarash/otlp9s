@@ -1,0 +1,50 @@
+# OpenTelemetry Collector configuration example.
+#
+# This config sends telemetry through otlp9s before it reaches the backend.
+#
+# Pipeline:
+#   app → collector (4317) → otlp9s (4317) → backend (4320)
+#
+# Start otlp9s first:
+#   otlp9s --listen :4317 --forward localhost:4320
+#
+# Then start the collector with the exporters pointing at otlp9s:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4316   # apps send here
+      http:
+        endpoint: 0.0.0.0:4319
+
+exporters:
+  # Forward to otlp9s (which proxies to the real backend).
+  otlp/tap:
+    endpoint: localhost:4317
+    tls:
+      insecure: true
+
+  # Example: real backend running on port 4320.
+  # otlp/backend:
+  #   endpoint: localhost:4320
+  #   tls:
+  #     insecure: true
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tap]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tap]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tap]
