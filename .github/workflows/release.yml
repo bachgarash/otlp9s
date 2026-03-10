@@ -36,7 +36,6 @@ jobs:
         run: |
           binary="otlp9s-${{ matrix.goos }}-${{ matrix.goarch }}"
           go build -ldflags="-s -w" -o "$binary" ./cmd/otlp9s/
-          chmod +x "$binary"
 
       - name: Upload release artifact
         uses: softprops/action-gh-release@v2

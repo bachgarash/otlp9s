@@ -1,6 +1,6 @@
 # otlp9s
 
-**Wireshark for OpenTelemetry** -- inspect OTLP traffic in your terminal.
+**Interactive OTLP debugger** -- inspect OpenTelemetry traffic in your terminal.
 
 `otlp9s` is a lightweight terminal proxy that sits between your OpenTelemetry collector (or SDK) and your backend. It intercepts all three signal types -- **traces**, **metrics**, and **logs** -- and renders them in a real-time interactive TUI.
 
@@ -197,4 +197,4 @@ go test ./...
 
 ## License
 
-MIT
+[The Unlicense](LICENSE) — public domain.
