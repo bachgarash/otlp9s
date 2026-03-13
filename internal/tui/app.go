@@ -107,9 +107,11 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// --- Navigation ---
 	case "j", "down":
+		m.streaming = false
 		m.cursor++
 		m.clampCursor()
 	case "k", "up":
+		m.streaming = false
 		if m.cursor > 0 {
 			m.cursor--
 		}
