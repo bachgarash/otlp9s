@@ -5,7 +5,7 @@
 `otlp9s` is a lightweight terminal proxy that sits between your OpenTelemetry collector (or SDK) and your backend. It intercepts all three signal types -- **traces**, **metrics**, and **logs** -- and renders them in a real-time interactive TUI.
 
 ```
-your app --> collector --> otlp9s --> backend (Jaeger, Tempo, etc.)
+your app --> otlp9s --> collector --> backend (Jaeger, Tempo, etc.)
 ```
 
 ## Features
