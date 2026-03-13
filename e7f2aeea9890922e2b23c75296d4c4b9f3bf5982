@@ -1,0 +1,23 @@
+internal/tui/app.go
+  1233ee0896b00a94 110,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "e7f2aeea9890922e2b23c75296d4c4b9f3bf5982",
+  "prompts": {
+    "1233ee0896b00a94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cbe51fd9-514d-4a21-805c-810c68956492",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "bachgarash <bakhtiyar.garashov@zendesk.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
